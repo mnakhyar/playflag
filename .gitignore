@@ -30,8 +30,18 @@ dist-ssr
 .claude
 skills-lock.json
 
-# Huge Gemini source masters (use optimized kebab-case webp/png in public/image)
-public/image/A*.png
-public/image/B*.png
-public/image/C*.png
+# Huge Gemini source masters (optimized kebab-case assets stay tracked)
 public/image/Gemini*.png
+public/image/*Onboarding*.png
+public/image/*App icon*.png
+public/image/*atmosphere strip*.png
+public/image/*journey backdrop*.png
+public/image/*masih kosong*.png
+public/image/*Streak hidup*.png
+public/image/*Level selesai*.png
+public/image/*top-down*.png
+public/image/*zona belajar*.png
+public/image/*chalk play*.png
+public/image/*Lapangan*.png
+public/image/C02.png
+public/image/C03.png
