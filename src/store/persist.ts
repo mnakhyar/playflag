@@ -1,5 +1,5 @@
-import { createInitialState } from '../content/teamDefaults'
-import type { PlayFlagState } from './types'
+import { createInitialState, normalizePlay } from '../content/teamDefaults'
+import type { Play, PlayFlagState } from './types'
 
 export const STORAGE_KEY = 'playflag:v1'
 
@@ -7,6 +7,20 @@ export type LoadResult = {
   state: PlayFlagState
   recoveredFromCorruptStorage: boolean
   persistDisabled: boolean
+}
+
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return !!value && typeof value === 'object'
+}
+
+function normalizeTeamPlays(rawPlays: unknown): Play[] {
+  if (!Array.isArray(rawPlays)) return []
+  const plays: Play[] = []
+  for (const play of rawPlays) {
+    const normalized = normalizePlay(play)
+    if (normalized) plays.push(normalized)
+  }
+  return plays
 }
 
 function isValidState(value: unknown): value is PlayFlagState {
@@ -42,6 +56,9 @@ export function loadState(): LoadResult {
     if (parsed.team.roster.length !== 5) {
       const initial = createInitialState()
       parsed.team.roster = initial.team.roster
+    }
+    if (isRecord(parsed.team)) {
+      parsed.team.plays = normalizeTeamPlays(parsed.team.plays)
     }
     return {
       state: parsed,

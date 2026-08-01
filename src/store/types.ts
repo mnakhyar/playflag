@@ -1,15 +1,21 @@
 export type SkillCategory = 'Rules' | 'Movement' | 'Strategy'
 
+export type PlaySide = 'offense' | 'defense'
+
 export type PlayerChip = {
   id: string
+  side: PlaySide
   x: number
   y: number
+  /** Defense labels e.g. "D1"… "D5" */
+  label?: string
 }
 
 export type Route = {
   id: string
   fromPlayerId: string
-  to: { x: number; y: number }
+  /** Field waypoints after the player chip (1–5) */
+  points: Array<{ x: number; y: number }>
 }
 
 export type Play = {

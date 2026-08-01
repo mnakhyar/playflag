@@ -1,34 +1,47 @@
 import { useEffect, useRef, useState, type PointerEvent as ReactPointerEvent } from 'react'
+import { MAX_ROUTE_POINTS } from '../content/teamDefaults'
 import { initials } from '../lib/id'
-import type { Play, RosterPlayer } from '../store/types'
+import type { Play, PlaySide, RosterPlayer } from '../store/types'
 
 const HIT_RADIUS = 28
+const HANDLE_RADIUS = 14
+
+type Point = { x: number; y: number }
 
 type PlayCanvasProps = {
   play: Play
   roster: RosterPlayer[]
   mode: 'position' | 'route'
+  activeSide: PlaySide
   onChange: (play: Play) => void
   selectedRouteId: string | null
   onSelectRoute: (id: string | null) => void
   routeDraftFrom: string | null
   onRouteDraftFrom: (id: string | null) => void
+  draftPoints: Point[]
+  onDraftPoints: (points: Point[]) => void
+  onCommitDraft: (fromPlayerId: string, points: Point[]) => void
 }
 
 export function PlayCanvas({
   play,
   roster,
   mode,
+  activeSide,
   onChange,
   selectedRouteId,
   onSelectRoute,
   routeDraftFrom,
   onRouteDraftFrom,
+  draftPoints,
+  onDraftPoints,
+  onCommitDraft,
 }: PlayCanvasProps) {
   const containerRef = useRef<HTMLDivElement>(null)
   const canvasRef = useRef<HTMLCanvasElement>(null)
   const [size, setSize] = useState({ w: 320, h: 420 })
-  const dragging = useRef<string | null>(null)
+  const draggingPlayer = useRef<string | null>(null)
+  const draggingHandle = useRef<{ routeId: string; index: number } | null>(null)
 
   useEffect(() => {
     const el = containerRef.current
@@ -55,10 +68,25 @@ export function PlayCanvas({
     const ctx = canvas.getContext('2d')
     if (!ctx) return
     ctx.setTransform(dpr, 0, 0, dpr, 0, 0)
-    drawField(ctx, size.w, size.h, play, roster, selectedRouteId, routeDraftFrom)
-  }, [size, play, roster, selectedRouteId, routeDraftFrom])
+    drawField(ctx, size.w, size.h, {
+      play,
+      roster,
+      activeSide,
+      selectedRouteId,
+      routeDraftFrom,
+      draftPoints,
+    })
+  }, [
+    size,
+    play,
+    roster,
+    activeSide,
+    selectedRouteId,
+    routeDraftFrom,
+    draftPoints,
+  ])
 
-  const toNorm = (clientX: number, clientY: number) => {
+  const toNorm = (clientX: number, clientY: number): Point => {
     const canvas = canvasRef.current
     if (!canvas) return { x: 0, y: 0 }
     const rect = canvas.getBoundingClientRect()
@@ -68,13 +96,12 @@ export function PlayCanvas({
     }
   }
 
-  const hitPlayer = (x: number, y: number) => {
-    const canvas = canvasRef.current
-    if (!canvas) return null
+  const hitPlayer = (x: number, y: number, sideOnly: PlaySide | null) => {
     const px = x * size.w
     const py = y * size.h
     let best: { id: string; dist: number } | null = null
     for (const p of play.players) {
+      if (sideOnly && p.side !== sideOnly) continue
       const dx = p.x * size.w - px
       const dy = p.y * size.h - py
       const dist = Math.hypot(dx, dy)
@@ -85,49 +112,123 @@ export function PlayCanvas({
     return best?.id ?? null
   }
 
+  const hitHandle = (x: number, y: number) => {
+    if (!selectedRouteId) return null
+    const route = play.routes.find((r) => r.id === selectedRouteId)
+    if (!route) return null
+    const from = play.players.find((p) => p.id === route.fromPlayerId)
+    if (!from || from.side !== activeSide) return null
+    const px = x * size.w
+    const py = y * size.h
+    let best: { index: number; dist: number } | null = null
+    for (let i = 0; i < route.points.length; i++) {
+      const pt = route.points[i]
+      const dist = Math.hypot(pt.x * size.w - px, pt.y * size.h - py)
+      if (dist <= HANDLE_RADIUS && (!best || dist < best.dist)) {
+        best = { index: i, dist }
+      }
+    }
+    return best ? { routeId: route.id, index: best.index } : null
+  }
+
+  const playerHasRoute = (playerId: string) =>
+    play.routes.some((r) => r.fromPlayerId === playerId)
+
+  const clearDraft = () => {
+    onRouteDraftFrom(null)
+    onDraftPoints([])
+  }
+
   const onPointerDown = (e: ReactPointerEvent<HTMLCanvasElement>) => {
     const { x, y } = toNorm(e.clientX, e.clientY)
-    const hit = hitPlayer(x, y)
-    if (mode === 'position' && hit) {
-      dragging.current = hit
+
+    if (mode === 'position') {
+      const hit = hitPlayer(x, y, activeSide)
+      if (hit) {
+        draggingPlayer.current = hit
+        ;(e.target as HTMLElement).setPointerCapture(e.pointerId)
+      }
+      return
+    }
+
+    // Route mode — prefer handles on selected route
+    const handle = hitHandle(x, y)
+    if (handle) {
+      draggingHandle.current = handle
       ;(e.target as HTMLElement).setPointerCapture(e.pointerId)
       return
     }
-    if (mode === 'route') {
-      if (hit) {
-        onRouteDraftFrom(hit)
-        onSelectRoute(null)
+
+    const hit = hitPlayer(x, y, activeSide)
+    if (hit) {
+      if (hit === routeDraftFrom) return
+
+      if (routeDraftFrom && draftPoints.length > 0) {
+        onCommitDraft(routeDraftFrom, draftPoints)
+      } else {
+        clearDraft()
+      }
+
+      if (playerHasRoute(hit)) {
+        const existing = play.routes.find((r) => r.fromPlayerId === hit)
+        onSelectRoute(existing?.id ?? null)
+        onRouteDraftFrom(null)
+        onDraftPoints([])
         return
       }
-      if (routeDraftFrom) {
-        const id = `route_${Math.random().toString(36).slice(2, 8)}`
-        onChange({
-          ...play,
-          routes: [
-            ...play.routes,
-            { id, fromPlayerId: routeDraftFrom, to: { x, y } },
-          ],
-        })
+
+      onSelectRoute(null)
+      onRouteDraftFrom(hit)
+      onDraftPoints([])
+      return
+    }
+
+    // Field tap while drafting
+    if (routeDraftFrom) {
+      if (draftPoints.length >= MAX_ROUTE_POINTS) return
+      const next = [...draftPoints, { x, y }]
+      if (next.length >= MAX_ROUTE_POINTS) {
+        onCommitDraft(routeDraftFrom, next)
         onRouteDraftFrom(null)
+        onDraftPoints([])
+      } else {
+        onDraftPoints(next)
       }
+      onSelectRoute(null)
     }
   }
 
   const onPointerMove = (e: ReactPointerEvent<HTMLCanvasElement>) => {
-    if (mode !== 'position' || !dragging.current) return
     const { x, y } = toNorm(e.clientX, e.clientY)
-    onChange({
-      ...play,
-      players: play.players.map((p) =>
-        p.id === dragging.current ? { ...p, x, y } : p,
-      ),
-    })
+
+    if (draggingHandle.current) {
+      const { routeId, index } = draggingHandle.current
+      onChange({
+        ...play,
+        routes: play.routes.map((r) => {
+          if (r.id !== routeId) return r
+          const points = r.points.map((pt, i) =>
+            i === index ? { x, y } : pt,
+          )
+          return { ...r, points }
+        }),
+      })
+      return
+    }
+
+    if (mode === 'position' && draggingPlayer.current) {
+      onChange({
+        ...play,
+        players: play.players.map((p) =>
+          p.id === draggingPlayer.current ? { ...p, x, y } : p,
+        ),
+      })
+    }
   }
 
   const onPointerUp = () => {
-    if (dragging.current) {
-      dragging.current = null
-    }
+    draggingPlayer.current = null
+    draggingHandle.current = null
   }
 
   return (
@@ -144,17 +245,25 @@ export function PlayCanvas({
   )
 }
 
+type DrawOpts = {
+  play: Play
+  roster: RosterPlayer[]
+  activeSide: PlaySide
+  selectedRouteId: string | null
+  routeDraftFrom: string | null
+  draftPoints: Point[]
+}
+
 function drawField(
   ctx: CanvasRenderingContext2D,
   w: number,
   h: number,
-  play: Play,
-  roster: RosterPlayer[],
-  selectedRouteId: string | null,
-  routeDraftFrom: string | null,
+  opts: DrawOpts,
 ) {
+  const { play, roster, activeSide, selectedRouteId, routeDraftFrom, draftPoints } =
+    opts
+
   ctx.clearRect(0, 0, w, h)
-  /* Field green stays on canvas only; UI chrome stays neutral. */
   ctx.fillStyle = '#1a5c3a'
   ctx.fillRect(0, 0, w, h)
 
@@ -172,51 +281,143 @@ function drawField(
 
   ctx.fillStyle = 'rgba(255,255,255,0.35)'
   ctx.font = '12px DM Sans, sans-serif'
+  ctx.textAlign = 'left'
+  ctx.textBaseline = 'alphabetic'
   ctx.fillText('ENDZONE', 12, 18)
   ctx.fillText('ENDZONE', 12, h - 8)
   ctx.fillText('MIDDLE', w / 2 - 24, h / 2 - 6)
 
   for (const route of play.routes) {
     const from = play.players.find((p) => p.id === route.fromPlayerId)
-    if (!from) continue
-    const x1 = from.x * w
-    const y1 = from.y * h
-    const x2 = route.to.x * w
-    const y2 = route.to.y * h
-    ctx.strokeStyle = route.id === selectedRouteId ? '#ff9f0a' : 'rgba(255,255,255,0.85)'
-    ctx.lineWidth = route.id === selectedRouteId ? 2.5 : 1.5
-    ctx.beginPath()
-    ctx.moveTo(x1, y1)
-    ctx.lineTo(x2, y2)
-    ctx.stroke()
-    drawArrowHead(
-      ctx,
-      x1,
-      y1,
-      x2,
-      y2,
-      route.id === selectedRouteId ? '#ff9f0a' : 'rgba(255,255,255,0.85)',
-    )
+    if (!from || route.points.length === 0) continue
+    const side = from.side
+    const active = side === activeSide
+    const selected = route.id === selectedRouteId
+    drawPolylineRoute(ctx, w, h, from, route.points, {
+      side,
+      selected,
+      alpha: active ? 1 : 0.28,
+    })
+    if (selected && active) {
+      for (const pt of route.points) {
+        drawHandle(ctx, pt.x * w, pt.y * h)
+      }
+    }
+  }
+
+  if (routeDraftFrom && draftPoints.length > 0) {
+    const from = play.players.find((p) => p.id === routeDraftFrom)
+    if (from) {
+      drawPolylineRoute(ctx, w, h, from, draftPoints, {
+        side: from.side,
+        selected: true,
+        alpha: 1,
+        preview: true,
+      })
+    }
   }
 
   for (const p of play.players) {
     const x = p.x * w
     const y = p.y * h
-    const name = roster.find((r) => r.id === p.id)?.name ?? p.id
-    const active = routeDraftFrom === p.id
+    const active = p.side === activeSide
+    const drafting = routeDraftFrom === p.id
+    const name =
+      p.side === 'defense'
+        ? (p.label ?? p.id.toUpperCase())
+        : (roster.find((r) => r.id === p.id)?.name ?? p.id)
+    const label =
+      p.side === 'defense' ? (p.label ?? 'D') : initials(name)
+
+    ctx.globalAlpha = active ? 1 : 0.32
     ctx.beginPath()
     ctx.arc(x, y, 18, 0, Math.PI * 2)
-    ctx.fillStyle = active ? '#ff9f0a' : '#0a0a0a'
+    if (drafting) {
+      ctx.fillStyle = '#ff9f0a'
+    } else if (p.side === 'defense') {
+      ctx.fillStyle = '#1c2a4a'
+    } else {
+      ctx.fillStyle = '#0a0a0a'
+    }
     ctx.fill()
-    ctx.strokeStyle = active ? '#ffb340' : 'rgba(255,255,255,0.55)'
+    ctx.strokeStyle = drafting
+      ? '#ffb340'
+      : p.side === 'defense'
+        ? 'rgba(255, 214, 10, 0.85)'
+        : 'rgba(255,255,255,0.55)'
     ctx.lineWidth = 1.5
     ctx.stroke()
-    ctx.fillStyle = active ? '#0a0a0a' : 'rgba(255,255,255,0.92)'
+    ctx.fillStyle = drafting
+      ? '#0a0a0a'
+      : p.side === 'defense'
+        ? 'rgba(255, 230, 140, 0.95)'
+        : 'rgba(255,255,255,0.92)'
     ctx.font = 'bold 11px DM Sans, sans-serif'
     ctx.textAlign = 'center'
     ctx.textBaseline = 'middle'
-    ctx.fillText(initials(name), x, y)
+    ctx.fillText(label, x, y)
+    ctx.globalAlpha = 1
   }
+}
+
+function drawPolylineRoute(
+  ctx: CanvasRenderingContext2D,
+  w: number,
+  h: number,
+  from: { x: number; y: number },
+  points: Point[],
+  style: {
+    side: PlaySide
+    selected: boolean
+    alpha: number
+    preview?: boolean
+  },
+) {
+  const nodes = [
+    { x: from.x * w, y: from.y * h },
+    ...points.map((p) => ({ x: p.x * w, y: p.y * h })),
+  ]
+  if (nodes.length < 2) return
+
+  const color = style.selected
+    ? '#ff9f0a'
+    : style.side === 'defense'
+      ? 'rgba(255, 214, 10, 0.9)'
+      : 'rgba(255,255,255,0.85)'
+
+  ctx.save()
+  ctx.globalAlpha = style.alpha
+  ctx.strokeStyle = color
+  ctx.lineWidth = style.selected || style.preview ? 2.5 : 1.5
+  ctx.lineJoin = 'round'
+  ctx.lineCap = 'round'
+  if (style.side === 'defense') {
+    ctx.setLineDash([7, 5])
+  } else {
+    ctx.setLineDash([])
+  }
+  ctx.beginPath()
+  ctx.moveTo(nodes[0].x, nodes[0].y)
+  for (let i = 1; i < nodes.length; i++) {
+    ctx.lineTo(nodes[i].x, nodes[i].y)
+  }
+  ctx.stroke()
+  ctx.setLineDash([])
+
+  const last = nodes[nodes.length - 1]
+  const prev = nodes[nodes.length - 2]
+  drawArrowHead(ctx, prev.x, prev.y, last.x, last.y, color)
+  ctx.restore()
+}
+
+function drawHandle(ctx: CanvasRenderingContext2D, x: number, y: number) {
+  ctx.beginPath()
+  ctx.arc(x, y, 6, 0, Math.PI * 2)
+  ctx.fillStyle = '#ff9f0a'
+  ctx.fill()
+  ctx.strokeStyle = '#0a0a0a'
+  ctx.lineWidth = 1.5
+  ctx.stroke()
 }
 
 function drawArrowHead(
