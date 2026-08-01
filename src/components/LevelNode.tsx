@@ -4,34 +4,48 @@ type LevelNodeProps = {
   id: number
   title: string
   status: NodeStatus
+  statusLabel: string
   onClick: () => void
+  index?: number
 }
 
-export function LevelNode({ id, title, status, onClick }: LevelNodeProps) {
+export function LevelNode({
+  id,
+  title,
+  status,
+  statusLabel,
+  onClick,
+  index = 0,
+}: LevelNodeProps) {
   const styles =
-    status === 'completed'
-      ? 'border-flag bg-flag/20 text-chalk'
-      : status === 'available'
-        ? 'border-line bg-turf/40 text-chalk shadow-[0_0_0_1px_rgba(255,90,31,0.35)]'
-        : 'border-line/20 bg-night/40 text-muted'
+    status === 'locked'
+      ? 'bg-transparent text-muted'
+      : 'bg-turf text-chalk'
+
+  const idTone =
+    status === 'available'
+      ? 'text-flag'
+      : status === 'completed'
+        ? 'text-line'
+        : 'text-muted'
 
   return (
     <button
       type="button"
       onClick={onClick}
-      className={`flex w-full items-center gap-4 rounded-2xl border px-4 py-3 text-left transition hover:brightness-110 ${styles}`}
+      style={{ animationDelay: `${index * 55}ms` }}
+      className={`stagger-in pressable flex min-h-14 w-full items-center gap-4 rounded-[var(--radius-surface)] px-4 py-3.5 text-left transition-colors duration-200 ease-[cubic-bezier(0.32,0.72,0,1)] ${styles}`}
     >
-      <span className="font-display text-2xl text-flag">{String(id).padStart(2, '0')}</span>
-      <span className="flex-1">
-        <span className="block font-medium">{title}</span>
-        <span className="text-xs uppercase tracking-wide opacity-70">
-          {status === 'completed'
-            ? 'Selesai'
-            : status === 'available'
-              ? 'Tersedia'
-              : 'Terkunci'}
-        </span>
+      <span className={`font-display text-2xl font-bold tabular-nums tracking-tight ${idTone}`}>
+        {String(id).padStart(2, '0')}
       </span>
+      <span className="min-w-0 flex-1">
+        <span className="block font-semibold tracking-tight text-balance">{title}</span>
+        <span className="text-xs text-muted">{statusLabel}</span>
+      </span>
+      {status === 'available' && (
+        <span className="h-1.5 w-1.5 shrink-0 rounded-full bg-flag" aria-hidden />
+      )}
     </button>
   )
 }

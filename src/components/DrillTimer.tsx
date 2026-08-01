@@ -48,19 +48,17 @@ export function DrillTimer({ running, onToggle, elapsedSec }: DrillTimerProps) {
   const ss = String(elapsedSec % 60).padStart(2, '0')
 
   return (
-    <div className="flex items-center justify-between gap-4 rounded-2xl bg-night/50 px-4 py-3 ring-1 ring-line/15">
+    <div className="flex items-center justify-between gap-4 border-y border-[rgba(84,84,88,0.55)] py-5">
       <div>
-        <p className="text-xs uppercase tracking-wide text-muted">Timer</p>
-        <p className="font-display text-4xl tabular-nums text-chalk">
+        <p className="text-[11px] font-medium uppercase tracking-[0.14em] text-muted">
+          Waktu
+        </p>
+        <p className="font-display text-4xl font-bold tabular-nums tracking-tight text-chalk">
           {mm}:{ss}
         </p>
       </div>
-      <button
-        type="button"
-        onClick={onToggle}
-        className="rounded-xl bg-flag px-4 py-2 font-semibold text-night hover:bg-flag-hot"
-      >
-        {running ? 'Stop' : 'Start'}
+      <button type="button" onClick={onToggle} className="btn-accent pressable min-h-11 px-5">
+        {running ? 'Berhenti' : 'Mulai'}
       </button>
     </div>
   )

@@ -34,13 +34,17 @@ export function SkillRadar({ scores }: SkillRadarProps) {
 
   return (
     <div className="flex flex-col items-center gap-3">
-      <svg viewBox={`0 0 ${SIZE} ${SIZE}`} className="h-48 w-48" aria-label="Radar skill">
+      <svg
+        viewBox={`0 0 ${SIZE} ${SIZE}`}
+        className="h-48 w-48"
+        aria-label="Radar skill"
+      >
         {grid.map((g) => (
           <polygon
             key={g}
             points={g}
             fill="none"
-            stroke="rgba(200,230,201,0.25)"
+            stroke="rgba(84,84,88,0.65)"
             strokeWidth="1"
           />
         ))}
@@ -53,16 +57,16 @@ export function SkillRadar({ scores }: SkillRadarProps) {
               y1={CY}
               x2={tip.x}
               y2={tip.y}
-              stroke="rgba(200,230,201,0.35)"
+              stroke="rgba(84,84,88,0.45)"
               strokeWidth="1"
             />
           )
         })}
         <polygon
           points={poly}
-          fill="rgba(255,90,31,0.35)"
-          stroke="#ff5a1f"
-          strokeWidth="2"
+          fill="rgba(255,159,10,0.18)"
+          stroke="#ff9f0a"
+          strokeWidth="1.5"
         />
         {AXES.map((axis, i) => {
           const label = point(i, 118)
@@ -73,7 +77,7 @@ export function SkillRadar({ scores }: SkillRadarProps) {
               y={label.y}
               textAnchor="middle"
               dominantBaseline="middle"
-              fill="#f4f7f2"
+              fill="rgba(255,255,255,0.55)"
               fontSize="11"
               fontFamily="DM Sans, sans-serif"
             >
@@ -82,7 +86,7 @@ export function SkillRadar({ scores }: SkillRadarProps) {
           )
         })}
       </svg>
-      <div className="flex w-full justify-between gap-2 text-xs text-muted">
+      <div className="flex w-full justify-between gap-2 text-xs tabular-nums text-muted">
         {AXES.map((axis) => (
           <span key={axis}>
             {axis} {scores[axis]}%

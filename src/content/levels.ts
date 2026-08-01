@@ -30,8 +30,8 @@ export const LEVELS: LevelSeed[] = [
       heading: 'Lapangan & aturan non-kontak',
       bullets: [
         'Flag football 5v5 IFAF: tidak ada tackling, blocking, atau kontak sengaja. Cabut flag lawan untuk menghentikan play.',
-        'Field of play 50 yard × 25 yard, plus endzone 10 yard di tiap ujung.',
-        'Middle line membagi lapangan. Line to gain pertama = middle — bukan “1st & 10”.',
+        'Field of play 50 yard x 25 yard, plus endzone 10 yard di tiap ujung.',
+        'Middle line membagi lapangan. Line to gain pertama = middle, bukan "1st & 10".',
         'No-running zone: 5 yard di depan tiap goal line. Di zona ini offense wajib forward pass.',
         'Skor dasar: touchdown 6, try 1 (dari yard 5) atau 2 (dari yard 10). Safety 2.',
       ],
@@ -45,7 +45,7 @@ export const LEVELS: LevelSeed[] = [
       },
       {
         id: 'l1q2',
-        prompt: 'Di no-running zone, offense harus…',
+        prompt: 'Di no-running zone, offense harus...',
         choices: [
           'Boleh run play bebas',
           'Wajib forward pass play',
@@ -82,8 +82,8 @@ export const LEVELS: LevelSeed[] = [
       heading: 'Gerakan tanpa tackling',
       bullets: [
         'Flag belt dipakai di pinggang; dua flag di samping. Pull salah satu flag untuk menghentikan play.',
-        'Approach dari samping atau depan dengan kaki ringan — jangan dive atau wrap tubuh.',
-        'Setelah pull, angkat flag tinggi agar wasit jelas melihat; jangan lempar jauh.',
+        'Approach dari samping atau depan dengan kaki ringan. Jangan dive atau wrap tubuh.',
+        'Setelah pull, angkat flag tinggi agar wasit jelas melihat. Jangan lempar jauh.',
         'Sebagai ball carrier: lindungi flag dengan sudut tubuh, tapi jangan cover flag dengan tangan (flag guarding).',
         'Break & plant: ubah arah cepat tanpa kontak tubuh lawan.',
       ],
@@ -102,13 +102,13 @@ export const LEVELS: LevelSeed[] = [
       },
       {
         id: 'l2q2',
-        prompt: 'Menutupi flag dengan tangan disebut…',
+        prompt: 'Menutupi flag dengan tangan disebut...',
         choices: ['Fair catch', 'Flag guarding', 'Holding', 'Blitz'],
         correctIndex: 1,
       },
       {
         id: 'l2q3',
-        prompt: 'Cara legal menghentikan runner adalah…',
+        prompt: 'Cara legal menghentikan runner adalah...',
         choices: [
           'Wrap tackle',
           'Shoulder check',
@@ -133,17 +133,17 @@ export const LEVELS: LevelSeed[] = [
     lesson: {
       heading: '4 downs & line to gain = middle',
       bullets: [
-        'Setiap seri: maksimal 4 down. Tidak ada first down karena yardage tetap — hanya karena melewati middle (sekali) atau menuju goal.',
+        'Setiap seri: maksimal 4 down. Tidak ada first down karena yardage tetap. Seri baru muncul setelah melewati middle (sekali) atau menuju goal.',
         'Mulai dari yard 5 sendiri: target pertama = middle. Setelah melewati middle, dapat 4 down baru menuju goal line.',
         'Melewati middle dua kali dalam satu seri tidak memberi first down lagi.',
         'Gagal di down ke-4: lawan mulai dari yard 5 mereka (bukan spot bola mati).',
-        'Panggil situasi dengan jelas: “2nd & Middle”, “1st & Goal” — bukan “2nd & 7”.',
+        'Panggil situasi dengan jelas: "2nd & Middle", "1st & Goal". Hindari format "2nd & 7".',
       ],
     },
     quiz: [
       {
         id: 'l3q1',
-        prompt: 'Setelah offense melewati middle pertama kali, mereka mendapat…',
+        prompt: 'Setelah offense melewati middle pertama kali, mereka mendapat...',
         choices: [
           '1 down ekstra saja',
           '4 down baru menuju goal',
@@ -154,13 +154,13 @@ export const LEVELS: LevelSeed[] = [
       },
       {
         id: 'l3q2',
-        prompt: 'Tampilan down yang benar di flag football adalah…',
+        prompt: 'Tampilan down yang benar di flag football adalah...',
         choices: ['2nd & 7', '2nd & Middle', '2nd & 10 yards', '2nd down only'],
         correctIndex: 1,
       },
       {
         id: 'l3q3',
-        prompt: 'Jika gagal di 4th down sebelum middle, defense mulai dari…',
+        prompt: 'Jika gagal di 4th down sebelum middle, defense mulai dari...',
         choices: [
           'Spot bola mati',
           'Yard 5 sendiri',
@@ -182,35 +182,39 @@ export const LEVELS: LevelSeed[] = [
     title: 'Offense basics',
     category: 'Strategy',
     statusInP1: 'teaser',
-    teaser: 'Formasi, snap, dan konsep rute dasar. Buka di tahap berikutnya — Road to 2028.',
+    teaser:
+      'Formasi, snap, dan konsep rute dasar. Konten ini masuk tahap berikutnya di jalur Road to 2028.',
   },
   {
     id: 5,
     title: 'Defense basics',
     category: 'Strategy',
     statusInP1: 'teaser',
-    teaser: 'Coverage, rush, dan komunikasi defense. Buka di tahap berikutnya — Road to 2028.',
+    teaser:
+      'Coverage, rush, dan komunikasi defense. Konten ini masuk tahap berikutnya di jalur Road to 2028.',
   },
   {
     id: 6,
     title: 'Situational plays',
     category: 'Strategy',
     statusInP1: 'teaser',
-    teaser: 'Red zone, 4th down, dan clock management. Buka di tahap berikutnya — Road to 2028.',
+    teaser:
+      'Red zone, 4th down, dan clock management. Konten ini masuk tahap berikutnya di jalur Road to 2028.',
   },
   {
     id: 7,
     title: 'Team chemistry drills',
     category: 'Movement',
     statusInP1: 'teaser',
-    teaser: 'Timing route + chemistry QB-WR. Buka di tahap berikutnya — Road to 2028.',
+    teaser:
+      'Timing route dan chemistry QB-WR. Konten ini masuk tahap berikutnya di jalur Road to 2028.',
   },
   {
     id: 8,
     title: 'Road to 2028 capstone',
     category: 'Rules',
     statusInP1: 'teaser',
-    teaser: 'Uji akhir: rules + movement + strategy menuju Olimpiade 2028.',
+    teaser: 'Uji akhir: rules, movement, dan strategy menuju Olimpiade 2028.',
   },
 ]
 

@@ -154,22 +154,23 @@ function drawField(
   routeDraftFrom: string | null,
 ) {
   ctx.clearRect(0, 0, w, h)
+  /* Field green stays on canvas only; UI chrome stays neutral. */
   ctx.fillStyle = '#1a5c3a'
   ctx.fillRect(0, 0, w, h)
 
   const endH = h * 0.12
-  ctx.fillStyle = '#0d3d26'
+  ctx.fillStyle = '#123d28'
   ctx.fillRect(0, 0, w, endH)
   ctx.fillRect(0, h - endH, w, endH)
 
-  ctx.strokeStyle = 'rgba(244,247,242,0.55)'
-  ctx.lineWidth = 2
+  ctx.strokeStyle = 'rgba(255,255,255,0.45)'
+  ctx.lineWidth = 1.5
   ctx.beginPath()
   ctx.moveTo(0, h / 2)
   ctx.lineTo(w, h / 2)
   ctx.stroke()
 
-  ctx.fillStyle = 'rgba(244,247,242,0.35)'
+  ctx.fillStyle = 'rgba(255,255,255,0.35)'
   ctx.font = '12px DM Sans, sans-serif'
   ctx.fillText('ENDZONE', 12, 18)
   ctx.fillText('ENDZONE', 12, h - 8)
@@ -182,13 +183,20 @@ function drawField(
     const y1 = from.y * h
     const x2 = route.to.x * w
     const y2 = route.to.y * h
-    ctx.strokeStyle = route.id === selectedRouteId ? '#ff7a45' : '#f4f7f2'
-    ctx.lineWidth = route.id === selectedRouteId ? 3 : 2
+    ctx.strokeStyle = route.id === selectedRouteId ? '#ff9f0a' : 'rgba(255,255,255,0.85)'
+    ctx.lineWidth = route.id === selectedRouteId ? 2.5 : 1.5
     ctx.beginPath()
     ctx.moveTo(x1, y1)
     ctx.lineTo(x2, y2)
     ctx.stroke()
-    drawArrowHead(ctx, x1, y1, x2, y2, route.id === selectedRouteId ? '#ff7a45' : '#f4f7f2')
+    drawArrowHead(
+      ctx,
+      x1,
+      y1,
+      x2,
+      y2,
+      route.id === selectedRouteId ? '#ff9f0a' : 'rgba(255,255,255,0.85)',
+    )
   }
 
   for (const p of play.players) {
@@ -198,12 +206,12 @@ function drawField(
     const active = routeDraftFrom === p.id
     ctx.beginPath()
     ctx.arc(x, y, 18, 0, Math.PI * 2)
-    ctx.fillStyle = active ? '#ff5a1f' : '#0b1a14'
+    ctx.fillStyle = active ? '#ff9f0a' : '#0a0a0a'
     ctx.fill()
-    ctx.strokeStyle = active ? '#ff7a45' : '#c8e6c9'
-    ctx.lineWidth = 2
+    ctx.strokeStyle = active ? '#ffb340' : 'rgba(255,255,255,0.55)'
+    ctx.lineWidth = 1.5
     ctx.stroke()
-    ctx.fillStyle = '#f4f7f2'
+    ctx.fillStyle = active ? '#0a0a0a' : 'rgba(255,255,255,0.92)'
     ctx.font = 'bold 11px DM Sans, sans-serif'
     ctx.textAlign = 'center'
     ctx.textBaseline = 'middle'

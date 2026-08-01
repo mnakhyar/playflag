@@ -1,26 +1,34 @@
-import { NavLink, Outlet } from 'react-router-dom'
+import { NavLink, Outlet, useLocation } from 'react-router-dom'
 import { usePlayFlag } from '../store/StoreProvider'
 
 const linkClass = ({ isActive }: { isActive: boolean }) =>
-  `flex-1 py-3 text-center text-sm font-semibold transition ${
-    isActive ? 'text-flag border-t-2 border-flag' : 'text-muted border-t-2 border-transparent'
+  `flex min-h-11 flex-1 items-center justify-center rounded-[0.625rem] px-2 text-center text-[13px] font-semibold tracking-tight transition-colors duration-200 ease-[cubic-bezier(0.32,0.72,0,1)] ${
+    isActive ? 'bg-surface text-chalk' : 'text-muted hover:text-line'
   }`
+
+function isFocusedRoute(pathname: string): boolean {
+  if (/^\/learn\/\d+\//.test(pathname)) return true
+  if (/^\/team\/plays\//.test(pathname)) return true
+  return false
+}
 
 export function AppLayout() {
   const { recoveredFromCorruptStorage, persistDisabled, dismissRecoveryBanner } =
     usePlayFlag()
+  const { pathname } = useLocation()
+  const focused = isFocusedRoute(pathname)
 
   return (
     <div className="mx-auto flex min-h-dvh w-full max-w-lg flex-col">
       {(recoveredFromCorruptStorage || persistDisabled) && (
-        <div className="bg-flag/90 px-4 py-2 text-sm text-night">
+        <div className="bg-turf px-4 py-3 text-sm text-line shadow-[inset_0_-0.5px_0_rgba(84,84,88,0.55)]">
           {persistDisabled
-            ? 'Progres tidak tersimpan (localStorage tidak tersedia).'
-            : 'Data demo dipulihkan dari penyimpanan rusak.'}
+            ? 'Progres tidak bisa disimpan di perangkat ini.'
+            : 'Data demo dipulihkan. Mulai ulang dari state bersih.'}
           {recoveredFromCorruptStorage && (
             <button
               type="button"
-              className="ml-2 underline"
+              className="ml-2 min-h-10 font-medium text-flag underline"
               onClick={dismissRecoveryBanner}
             >
               Tutup
@@ -28,22 +36,28 @@ export function AppLayout() {
           )}
         </div>
       )}
-      <main className="flex-1 px-4 pb-24 pt-6">
+      <main
+        className={`flex-1 px-5 pt-8 ${focused ? 'pb-10' : 'pb-[calc(6.5rem+env(safe-area-inset-bottom))]'}`}
+      >
         <Outlet />
       </main>
-      <nav className="fixed bottom-0 left-0 right-0 z-10 border-t border-line/15 bg-night/95 backdrop-blur">
-        <div className="mx-auto flex max-w-lg">
-          <NavLink to="/dashboard" className={linkClass}>
-            Dashboard
-          </NavLink>
-          <NavLink to="/learn" className={linkClass}>
-            Belajar
-          </NavLink>
-          <NavLink to="/team" className={linkClass}>
-            Tim Saya
-          </NavLink>
-        </div>
-      </nav>
+      {!focused && (
+        <nav className="pointer-events-none fixed inset-x-0 bottom-0 z-10 px-4 pb-[calc(0.75rem+env(safe-area-inset-bottom))]">
+          <div className="pointer-events-auto mx-auto max-w-lg rounded-2xl bg-black/55 p-1.5 shadow-[inset_0_0_0_0.5px_rgba(255,255,255,0.1),0_8px_30px_rgba(0,0,0,0.35)] backdrop-blur-xl backdrop-saturate-150">
+            <div className="flex gap-1">
+              <NavLink to="/dashboard" className={linkClass}>
+                Beranda
+              </NavLink>
+              <NavLink to="/learn" className={linkClass}>
+                Belajar
+              </NavLink>
+              <NavLink to="/team" className={linkClass}>
+                Tim
+              </NavLink>
+            </div>
+          </div>
+        </nav>
+      )}
     </div>
   )
 }

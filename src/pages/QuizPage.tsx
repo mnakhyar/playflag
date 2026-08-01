@@ -1,5 +1,6 @@
 import { useMemo, useState } from 'react'
-import { Link, Navigate, useNavigate, useParams } from 'react-router-dom'
+import { Navigate, useNavigate, useParams } from 'react-router-dom'
+import { FlowBackLink } from '../components/FlowBackLink'
 import { getLevel } from '../content/levels'
 import { nodeStatus } from '../store/selectors'
 import { usePlayFlag } from '../store/StoreProvider'
@@ -47,29 +48,44 @@ export function QuizPage() {
     setSubmitted(true)
   }
 
+  const retry = () => {
+    setAnswers(questions.map(() => null))
+    setSubmitted(false)
+  }
+
   return (
-    <div className="space-y-6">
-      <div>
-        <p className="text-sm text-flag">Level {id} · Kuis</p>
-        <h1 className="font-display text-4xl text-chalk">{level.title}</h1>
-        <p className="text-sm text-muted">3 soal · boleh lanjut meski belum 100%</p>
+    <div className="space-y-8">
+      <FlowBackLink to={`/learn/${id}/lesson`}>Kembali ke lesson</FlowBackLink>
+
+      <div className="space-y-2">
+        <p className="text-[13px] font-medium text-flag">
+          Level <span className="tabular-nums">{id}</span>
+          <span className="text-muted"> · Kuis</span>
+        </p>
+        <h1 className="font-display text-4xl font-extrabold tracking-tight text-chalk">
+          {level.title}
+        </h1>
+        <p className="max-w-[40ch] text-sm leading-relaxed text-muted">
+          Tiga soal pilihan ganda. Kamu bisa lanjut ke drill meski skor belum penuh, dan boleh
+          mengulang sebelum drill.
+        </p>
       </div>
 
-      <div className="space-y-5">
+      <div className="space-y-8">
         {questions.map((q, qi) => (
-          <fieldset key={q.id} className="space-y-2">
-            <legend className="font-medium text-chalk">
-              {qi + 1}. {q.prompt}
+          <fieldset key={q.id} className="space-y-3">
+            <legend className="font-medium leading-snug text-pretty text-chalk">
+              <span className="tabular-nums text-flag">{qi + 1}.</span> {q.prompt}
             </legend>
-            <div className="space-y-2">
+            <div className="divide-y divide-[rgba(84,84,88,0.55)]">
               {q.choices.map((choice, ci) => {
                 const selected = answers[qi] === ci
-                let ring = 'ring-line/15'
+                let tone = 'text-line'
                 if (submitted) {
-                  if (ci === q.correctIndex) ring = 'ring-flag'
-                  else if (selected) ring = 'ring-red-400'
+                  if (ci === q.correctIndex) tone = 'text-flag'
+                  else if (selected) tone = 'text-red-300'
                 } else if (selected) {
-                  ring = 'ring-flag'
+                  tone = 'text-chalk'
                 }
                 return (
                   <button
@@ -83,7 +99,9 @@ export function QuizPage() {
                         return next
                       })
                     }
-                    className={`block w-full rounded-xl bg-night/40 px-3 py-2 text-left text-sm ring-1 ${ring}`}
+                    className={`pressable flex min-h-11 w-full items-center px-1 py-3 text-left text-[15px] transition-colors ${tone} ${
+                      selected && !submitted ? 'bg-white/[0.03]' : ''
+                    }`}
                   >
                     {choice}
                   </button>
@@ -99,25 +117,32 @@ export function QuizPage() {
           type="button"
           disabled={!allAnswered}
           onClick={submit}
-          className="w-full rounded-2xl bg-flag py-3 font-semibold text-night disabled:opacity-40"
+          className="btn-primary"
         >
           Kirim jawaban
         </button>
       ) : (
         <div className="space-y-3">
-          <p className="rounded-2xl bg-turf/30 px-4 py-3 text-center font-semibold">
-            Skor: {scorePercent}%
+          <p className="text-center text-lg font-semibold tabular-nums tracking-tight">
+            Skor kamu: {scorePercent}%
           </p>
           <button
             type="button"
             onClick={() => navigate(`/learn/${id}/drill`)}
-            className="w-full rounded-2xl bg-flag py-3 font-semibold text-night"
+            className="btn-primary group"
           >
-            Lanjut ke drill
+            <span>Lanjut ke drill</span>
+            <span
+              className="flex h-7 w-7 items-center justify-center rounded-md bg-black/10 transition-transform duration-200 group-hover:translate-x-0.5"
+              aria-hidden
+            >
+              →
+            </span>
           </button>
-          <Link to="/learn" className="block text-center text-sm text-muted underline">
-            Kembali ke skill tree
-          </Link>
+          <button type="button" onClick={retry} className="btn-secondary">
+            Ulangi kuis
+          </button>
+          <FlowBackLink to="/learn">Kembali ke skill tree</FlowBackLink>
         </div>
       )}
     </div>
