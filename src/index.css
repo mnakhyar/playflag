@@ -1,0 +1,50 @@
+@import "tailwindcss";
+
+@theme {
+  --font-display: "Bebas Neue", Impact, sans-serif;
+  --font-sans: "DM Sans", system-ui, sans-serif;
+
+  --color-turf: #1a5c3a;
+  --color-turf-deep: #0d3d26;
+  --color-chalk: #f4f7f2;
+  --color-flag: #ff5a1f;
+  --color-flag-hot: #ff7a45;
+  --color-night: #0b1a14;
+  --color-line: #c8e6c9;
+  --color-muted: #7a9a88;
+}
+
+@layer base {
+  html,
+  body,
+  #root {
+    min-height: 100%;
+  }
+
+  body {
+    margin: 0;
+    font-family: var(--font-sans);
+    color: var(--color-chalk);
+    background:
+      radial-gradient(ellipse 120% 80% at 50% -20%, #1f7a4a 0%, transparent 55%),
+      linear-gradient(180deg, var(--color-turf-deep) 0%, var(--color-night) 100%);
+    background-attachment: fixed;
+  }
+
+  * {
+    box-sizing: border-box;
+  }
+
+  button,
+  input,
+  textarea {
+    font: inherit;
+  }
+}
+
+@layer utilities {
+  .font-display {
+    font-family: var(--font-display);
+    letter-spacing: 0.04em;
+  }
+}
