@@ -7,7 +7,7 @@ const linkClass = ({ isActive }: { isActive: boolean }) =>
   }`
 
 function isFocusedRoute(pathname: string): boolean {
-  if (/^\/learn\/\d+\//.test(pathname)) return true
+  if (/^\/learn\/[^/]+\/(lesson|quiz|drill)\/?$/.test(pathname)) return true
   if (/^\/team\/plays\//.test(pathname)) return true
   return false
 }

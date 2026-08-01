@@ -1,19 +1,20 @@
 import { useMemo, useState } from 'react'
 import { Navigate, useNavigate, useParams } from 'react-router-dom'
 import { FlowBackLink } from '../components/FlowBackLink'
-import { getLevel } from '../content/levels'
-import { nodeStatus } from '../store/selectors'
+import { getSkill } from '../content/skillTree'
+import { skillNodeStatus } from '../store/selectors'
 import { usePlayFlag } from '../store/StoreProvider'
 
 export function QuizPage() {
-  const { levelId } = useParams()
-  const id = Number(levelId)
+  const { skillId } = useParams()
   const { state, dispatch } = usePlayFlag()
   const navigate = useNavigate()
-  const level = getLevel(id)
-  const status = nodeStatus(id, state.progress.completedLevels)
+  const skill = skillId ? getSkill(skillId) : undefined
+  const status = skill
+    ? skillNodeStatus(skill.id, state.progress.skillMastery)
+    : 'locked'
 
-  const questions = level?.quiz ?? []
+  const questions = skill?.quiz ?? []
   const [answers, setAnswers] = useState<(number | null)[]>(() =>
     questions.map(() => null),
   )
@@ -28,7 +29,7 @@ export function QuizPage() {
     return Math.round((correct / questions.length) * 100)
   }, [answers, questions])
 
-  if (!level || level.statusInP1 !== 'full' || !level.quiz) {
+  if (!skill || !skill.interactive || !skill.quiz || !skill.category) {
     return <Navigate to="/learn" replace />
   }
   if (status === 'locked') {
@@ -41,8 +42,8 @@ export function QuizPage() {
     if (!allAnswered) return
     dispatch({
       type: 'SUBMIT_QUIZ',
-      levelId: id,
-      category: level.category,
+      skillId: skill.id,
+      category: skill.category!,
       scorePercent,
     })
     setSubmitted(true)
@@ -55,15 +56,15 @@ export function QuizPage() {
 
   return (
     <div className="space-y-8">
-      <FlowBackLink to={`/learn/${id}/lesson`}>Kembali ke lesson</FlowBackLink>
+      <FlowBackLink to={`/learn/${skill.id}/lesson`}>Kembali ke lesson</FlowBackLink>
 
       <div className="space-y-2">
         <p className="text-[13px] font-medium text-flag">
-          Level <span className="tabular-nums">{id}</span>
+          {skill.id}
           <span className="text-muted"> · Kuis</span>
         </p>
         <h1 className="font-display text-4xl font-extrabold tracking-tight text-chalk">
-          {level.title}
+          {skill.name}
         </h1>
         <p className="max-w-[40ch] text-sm leading-relaxed text-muted">
           Tiga soal pilihan ganda. Kamu bisa lanjut ke drill meski skor belum penuh, dan boleh
@@ -128,7 +129,7 @@ export function QuizPage() {
           </p>
           <button
             type="button"
-            onClick={() => navigate(`/learn/${id}/drill`)}
+            onClick={() => navigate(`/learn/${skill.id}/drill`)}
             className="btn-primary group"
           >
             <span>Lanjut ke drill</span>

@@ -1,12 +1,29 @@
+import {
+  DEMO_UNLOCK_ALL,
+  SKILLS,
+  getSkill,
+  type SkillBranch,
+  type SkillPosition,
+} from '../content/skillTree'
 import { daysBetween } from '../lib/dates'
-import type { PlayFlagState, Profile, SkillCategory } from './types'
+import type {
+  PlayFlagState,
+  Profile,
+  SkillCategory,
+  SkillMastery,
+} from './types'
 
 export function pathPercent(state: PlayFlagState): number {
-  return Math.round((state.progress.completedLevels.length / 8) * 100)
+  if (SKILLS.length === 0) return 0
+  const done = SKILLS.filter(
+    (s) => state.progress.skillMastery[s.id] === 'done',
+  ).length
+  return Math.round((done / SKILLS.length) * 100)
 }
 
-export function phase1CompletedCount(state: PlayFlagState): number {
-  return state.progress.completedLevels.filter((id) => id >= 1 && id <= 3).length
+export function doneSkillCount(state: PlayFlagState): number {
+  return Object.values(state.progress.skillMastery).filter((m) => m === 'done')
+    .length
 }
 
 export function touchActivity(
@@ -50,102 +67,127 @@ export function hasRadarData(state: PlayFlagState): boolean {
 
 export type NodeStatus = 'locked' | 'available' | 'completed'
 
-/** Phase 1: levels 4–8 always locked; 1–3 sequential. */
-export function nodeStatus(
-  levelId: number,
-  completedLevels: number[],
-): NodeStatus {
-  if (levelId >= 4) return 'locked'
-  if (completedLevels.includes(levelId)) return 'completed'
-  if (levelId === 1) return 'available'
-  if (completedLevels.includes(levelId - 1)) return 'available'
-  return 'locked'
+function branchSkillsDone(
+  branch: SkillBranch,
+  mastery: Record<string, SkillMastery>,
+): boolean {
+  const nodes = SKILLS.filter((s) => s.branch === branch && s.position == null)
+  return nodes.length > 0 && nodes.every((s) => mastery[s.id] === 'done')
 }
 
-export type LockReason = 'sequential' | 'teaser' | null
+function generalDone(mastery: Record<string, SkillMastery>): boolean {
+  return branchSkillsDone('general', mastery)
+}
 
-export function lockReason(
-  levelId: number,
-  completedLevels: number[],
-): LockReason {
-  const status = nodeStatus(levelId, completedLevels)
-  if (status !== 'locked') return null
-  if (levelId >= 4) return 'teaser'
-  return 'sequential'
+/** Demo: never locked. Later: GEN → side → position gates. */
+export function skillNodeStatus(
+  skillId: string,
+  mastery: Record<string, SkillMastery>,
+): NodeStatus {
+  if (mastery[skillId] === 'done') return 'completed'
+  if (DEMO_UNLOCK_ALL) return 'available'
+
+  const skill = getSkill(skillId)
+  if (!skill) return 'locked'
+
+  if (skill.branch === 'general') {
+    return 'available'
+  }
+
+  if (!generalDone(mastery)) return 'locked'
+
+  if (skill.position == null) {
+    return 'available'
+  }
+
+  const sideDone = branchSkillsDone(skill.branch, mastery)
+  if (!sideDone) return 'locked'
+  return 'available'
+}
+
+export function getMastery(
+  skillId: string,
+  mastery: Record<string, SkillMastery>,
+): SkillMastery {
+  return mastery[skillId] ?? 'unseen'
 }
 
 export type LearnStep = 'lesson' | 'quiz' | 'drill'
 
 export type LearnTarget = {
-  levelId: number
+  skillId: string
   step: LearnStep
 }
 
+const INTERACTIVE_ORDER = ['GEN-01', 'GEN-05', 'GEN-08'] as const
+
 function hasPendingDrill(
-  levelId: number,
-  completedLevels: number[],
+  skillId: string,
+  mastery: Record<string, SkillMastery>,
   quizScores: PlayFlagState['progress']['quizScores'],
 ): boolean {
-  if (completedLevels.includes(levelId)) return false
-  return quizScores[levelId] != null
+  if (mastery[skillId] === 'done') return false
+  return quizScores[skillId] != null
 }
 
-/** Infer next learn target from quizScores + completedLevels (no extra storage). */
 export function nextLearnTarget(state: PlayFlagState): LearnTarget | null {
-  const { completedLevels, quizScores } = state.progress
+  const { skillMastery, quizScores } = state.progress
 
-  for (let id = 1; id <= 3; id++) {
-    if (completedLevels.includes(id)) continue
-    if (hasPendingDrill(id, completedLevels, quizScores)) {
-      return { levelId: id, step: 'drill' }
+  for (const skillId of INTERACTIVE_ORDER) {
+    if (skillMastery[skillId] === 'done') continue
+    if (hasPendingDrill(skillId, skillMastery, quizScores)) {
+      return { skillId, step: 'drill' }
     }
-    if (nodeStatus(id, completedLevels) === 'available') {
-      return { levelId: id, step: 'lesson' }
+    if (skillNodeStatus(skillId, skillMastery) === 'available') {
+      return { skillId, step: 'lesson' }
     }
   }
   return null
 }
 
 export function learnPath(target: LearnTarget): string {
-  return `/learn/${target.levelId}/${target.step}`
+  return `/learn/${target.skillId}/${target.step}`
 }
 
-export function levelStatusLabel(
-  levelId: number,
+export function skillStatusLabel(
+  skillId: string,
   status: NodeStatus,
-  completedLevels: number[],
+  mastery: Record<string, SkillMastery>,
   quizScores: PlayFlagState['progress']['quizScores'],
 ): string {
-  if (status === 'completed') return 'Sudah selesai'
-  if (status === 'available') {
-    if (hasPendingDrill(levelId, completedLevels, quizScores)) {
-      return 'Lanjutkan drill'
-    }
-    return 'Siap dibuka'
+  const level = getMastery(skillId, mastery)
+  if (status === 'completed' || level === 'done') return 'Selesai'
+  if (level === 'learning') {
+    if (hasPendingDrill(skillId, mastery, quizScores)) return 'Lanjutkan drill'
+    return 'Sedang dipelajari'
   }
-  const reason = lockReason(levelId, completedLevels)
-  if (reason === 'teaser') return 'Belum dibuka'
-  if (levelId > 1) return `Selesaikan level ${levelId - 1} dulu`
+  if (status === 'available') return 'Siap dibuka'
   return 'Terkunci'
 }
 
-export function lockTeaserMessage(
-  levelId: number,
-  completedLevels: number[],
-  teaser?: string,
-): string {
-  const reason = lockReason(levelId, completedLevels)
-  if (reason === 'sequential') {
-    return `Selesaikan level ${levelId - 1} dulu agar level ini terbuka.`
-  }
-  return teaser ?? 'Konten ini masuk tahap berikutnya di jalur Road to 2028.'
-}
-
-export function entryStepForLevel(
-  levelId: number,
+export function entryStepForSkill(
+  skillId: string,
   state: PlayFlagState,
 ): LearnStep {
-  const { completedLevels, quizScores } = state.progress
-  if (hasPendingDrill(levelId, completedLevels, quizScores)) return 'drill'
+  const { skillMastery, quizScores } = state.progress
+  if (hasPendingDrill(skillId, skillMastery, quizScores)) return 'drill'
   return 'lesson'
+}
+
+export function branchProgress(
+  branch: SkillBranch,
+  mastery: Record<string, SkillMastery>,
+): { done: number; total: number } {
+  const nodes = SKILLS.filter((s) => s.branch === branch)
+  const done = nodes.filter((s) => mastery[s.id] === 'done').length
+  return { done, total: nodes.length }
+}
+
+export function positionProgress(
+  position: SkillPosition,
+  mastery: Record<string, SkillMastery>,
+): { done: number; total: number } {
+  const nodes = SKILLS.filter((s) => s.position === position)
+  const done = nodes.filter((s) => mastery[s.id] === 'done').length
+  return { done, total: nodes.length }
 }

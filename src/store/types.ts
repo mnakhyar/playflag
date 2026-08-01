@@ -1,5 +1,7 @@
 export type SkillCategory = 'Rules' | 'Movement' | 'Strategy'
 
+export type SkillMastery = 'unseen' | 'learning' | 'done'
+
 export type PlaySide = 'offense' | 'defense'
 
 export type PlayerChip = {
@@ -41,13 +43,15 @@ export type Profile = {
 export type PlayFlagState = {
   profile: Profile | null
   progress: {
+    /** @deprecated migrated to skillMastery; kept for legacy reads */
     completedLevels: number[]
+    skillMastery: Record<string, SkillMastery>
     quizScores: Record<
-      number,
+      string,
       { category: SkillCategory; scorePercent: number }
     >
     drillLogs: Array<{
-      levelId: number
+      skillId: string
       targetReps: number
       achievedReps: number
       durationSec: number
@@ -65,17 +69,22 @@ export type PlayFlagAction =
   | { type: 'COMPLETE_ONBOARDING'; displayName: string; today: string }
   | {
       type: 'SUBMIT_QUIZ'
-      levelId: number
+      skillId: string
       category: SkillCategory
       scorePercent: number
     }
   | {
       type: 'COMPLETE_DRILL'
-      levelId: number
+      skillId: string
       targetReps: number
       achievedReps: number
       durationSec: number
       today: string
+    }
+  | {
+      type: 'SET_SKILL_MASTERY'
+      skillId: string
+      mastery: SkillMastery
     }
   | {
       type: 'UPDATE_TEAM_META'

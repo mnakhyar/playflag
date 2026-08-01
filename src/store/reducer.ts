@@ -37,10 +37,17 @@ export function playFlagReducer(
           ...state.progress,
           quizScores: {
             ...state.progress.quizScores,
-            [action.levelId]: {
+            [action.skillId]: {
               category: action.category,
               scorePercent: action.scorePercent,
             },
+          },
+          skillMastery: {
+            ...state.progress.skillMastery,
+            [action.skillId]:
+              state.progress.skillMastery[action.skillId] === 'done'
+                ? 'done'
+                : 'learning',
           },
         },
       }
@@ -48,19 +55,19 @@ export function playFlagReducer(
     case 'COMPLETE_DRILL': {
       if (!state.profile) return state
       const activity = touchActivity(state.profile, action.today)
-      const already = state.progress.completedLevels.includes(action.levelId)
       return {
         ...state,
         profile: { ...state.profile, ...activity },
         progress: {
           ...state.progress,
-          completedLevels: already
-            ? state.progress.completedLevels
-            : [...state.progress.completedLevels, action.levelId],
+          skillMastery: {
+            ...state.progress.skillMastery,
+            [action.skillId]: 'done',
+          },
           drillLogs: [
             ...state.progress.drillLogs,
             {
-              levelId: action.levelId,
+              skillId: action.skillId,
               targetReps: action.targetReps,
               achievedReps: action.achievedReps,
               durationSec: action.durationSec,
@@ -70,6 +77,18 @@ export function playFlagReducer(
         },
       }
     }
+
+    case 'SET_SKILL_MASTERY':
+      return {
+        ...state,
+        progress: {
+          ...state.progress,
+          skillMastery: {
+            ...state.progress.skillMastery,
+            [action.skillId]: action.mastery,
+          },
+        },
+      }
 
     case 'UPDATE_TEAM_META':
       return {

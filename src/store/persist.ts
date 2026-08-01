@@ -1,7 +1,9 @@
 import { createInitialState, normalizePlay } from '../content/teamDefaults'
-import type { Play, PlayFlagState } from './types'
+import { LEGACY_LEVEL_TO_SKILL } from '../content/skillTree'
+import type { Play, PlayFlagState, SkillMastery } from './types'
 
-export const STORAGE_KEY = 'playflag:v1'
+export const STORAGE_KEY = 'playflag:v2'
+const LEGACY_STORAGE_KEY = 'playflag:v1'
 
 export type LoadResult = {
   state: PlayFlagState
@@ -13,56 +15,140 @@ function isRecord(value: unknown): value is Record<string, unknown> {
   return !!value && typeof value === 'object'
 }
 
-function normalizeTeamPlays(rawPlays: unknown): Play[] {
-  if (!Array.isArray(rawPlays)) return []
+function migrateLegacyState(raw: unknown): PlayFlagState | null {
+  if (!isRecord(raw) || !isRecord(raw.progress) || !isRecord(raw.team)) {
+    return null
+  }
+  const progress = raw.progress
+  const completedLevels = Array.isArray(progress.completedLevels)
+    ? (progress.completedLevels as number[])
+    : []
+  const skillMastery: Record<string, SkillMastery> = {
+    ...(isRecord(progress.skillMastery)
+      ? (progress.skillMastery as Record<string, SkillMastery>)
+      : {}),
+  }
+  for (const levelId of completedLevels) {
+    const skillId = LEGACY_LEVEL_TO_SKILL[levelId]
+    if (skillId) skillMastery[skillId] = 'done'
+  }
+
+  const quizScores: PlayFlagState['progress']['quizScores'] = {}
+  if (isRecord(progress.quizScores)) {
+    for (const [key, value] of Object.entries(progress.quizScores)) {
+      if (!isRecord(value)) continue
+      const skillId = LEGACY_LEVEL_TO_SKILL[Number(key)] ?? key
+      quizScores[skillId] = {
+        category: value.category as PlayFlagState['progress']['quizScores'][string]['category'],
+        scorePercent: Number(value.scorePercent) || 0,
+      }
+    }
+  }
+
+  const drillLogs: PlayFlagState['progress']['drillLogs'] = []
+  if (Array.isArray(progress.drillLogs)) {
+    for (const log of progress.drillLogs) {
+      if (!isRecord(log)) continue
+      const skillId =
+        typeof log.skillId === 'string'
+          ? log.skillId
+          : LEGACY_LEVEL_TO_SKILL[Number(log.levelId)]
+      if (!skillId) continue
+      drillLogs.push({
+        skillId,
+        targetReps: Number(log.targetReps) || 0,
+        achievedReps: Number(log.achievedReps) || 0,
+        durationSec: Number(log.durationSec) || 0,
+        at: typeof log.at === 'string' ? log.at : new Date().toISOString(),
+      })
+    }
+  }
+
+  const team = raw.team
+  if (!Array.isArray(team.roster) || !Array.isArray(team.plays)) return null
+
   const plays: Play[] = []
-  for (const play of rawPlays) {
+  for (const play of team.plays) {
     const normalized = normalizePlay(play)
     if (normalized) plays.push(normalized)
   }
-  return plays
+
+  return {
+    profile: (raw.profile as PlayFlagState['profile']) ?? null,
+    progress: {
+      completedLevels,
+      skillMastery,
+      quizScores,
+      drillLogs,
+    },
+    team: {
+      name: typeof team.name === 'string' ? team.name : 'Tim PlayFlag',
+      roster: team.roster as PlayFlagState['team']['roster'],
+      plays,
+    },
+  }
 }
 
 function isValidState(value: unknown): value is PlayFlagState {
-  if (!value || typeof value !== 'object') return false
-  const v = value as PlayFlagState
+  if (!isRecord(value) || !isRecord(value.progress) || !isRecord(value.team)) {
+    return false
+  }
+  const progress = value.progress
   return (
-    !!v.progress &&
-    Array.isArray(v.progress.completedLevels) &&
-    !!v.team &&
-    Array.isArray(v.team.roster) &&
-    Array.isArray(v.team.plays)
+    Array.isArray(progress.completedLevels) &&
+    isRecord(progress.skillMastery) &&
+    isRecord(progress.quizScores) &&
+    Array.isArray(progress.drillLogs) &&
+    Array.isArray(value.team.roster) &&
+    Array.isArray(value.team.plays)
   )
 }
 
 export function loadState(): LoadResult {
   try {
-    const raw = localStorage.getItem(STORAGE_KEY)
-    if (!raw) {
+    const tryLoad = (raw: string | null): PlayFlagState | null => {
+      if (!raw) return null
+      const parsed: unknown = JSON.parse(raw)
+      const migrated = migrateLegacyState(parsed)
+      if (!migrated || !isValidState(migrated)) return null
+      if (migrated.team.roster.length !== 5) {
+        const initial = createInitialState()
+        migrated.team.roster = initial.team.roster
+      }
+      return migrated
+    }
+
+    const fromV2 = tryLoad(localStorage.getItem(STORAGE_KEY))
+    if (fromV2) {
       return {
-        state: createInitialState(),
+        state: fromV2,
         recoveredFromCorruptStorage: false,
         persistDisabled: false,
       }
     }
-    const parsed: unknown = JSON.parse(raw)
-    if (!isValidState(parsed)) {
+
+    const fromV1 = tryLoad(localStorage.getItem(LEGACY_STORAGE_KEY))
+    if (fromV1) {
+      saveState(fromV1)
+      try {
+        localStorage.removeItem(LEGACY_STORAGE_KEY)
+      } catch {
+        /* ignore */
+      }
       return {
-        state: createInitialState(),
-        recoveredFromCorruptStorage: true,
+        state: fromV1,
+        recoveredFromCorruptStorage: !!localStorage.getItem(STORAGE_KEY),
         persistDisabled: false,
       }
     }
-    if (parsed.team.roster.length !== 5) {
-      const initial = createInitialState()
-      parsed.team.roster = initial.team.roster
-    }
-    if (isRecord(parsed.team)) {
-      parsed.team.plays = normalizeTeamPlays(parsed.team.plays)
-    }
+
+    const hadAny =
+      localStorage.getItem(STORAGE_KEY) != null ||
+      localStorage.getItem(LEGACY_STORAGE_KEY) != null
+
     return {
-      state: parsed,
-      recoveredFromCorruptStorage: false,
+      state: createInitialState(),
+      recoveredFromCorruptStorage: hadAny,
       persistDisabled: false,
     }
   } catch (err) {

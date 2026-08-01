@@ -29,3 +29,9 @@ dist-ssr
 .agents
 .claude
 skills-lock.json
+
+# Huge Gemini source masters (use optimized kebab-case webp/png in public/image)
+public/image/A*.png
+public/image/B*.png
+public/image/C*.png
+public/image/Gemini*.png

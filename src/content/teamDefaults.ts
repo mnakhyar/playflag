@@ -198,6 +198,7 @@ export function createInitialState(): PlayFlagState {
     profile: null,
     progress: {
       completedLevels: [],
+      skillMastery: {},
       quizScores: {},
       drillLogs: [],
     },

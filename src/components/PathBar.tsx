@@ -7,7 +7,7 @@ export function PathBar({ percent }: PathBarProps) {
   return (
     <div className="w-full space-y-3">
       <div className="flex items-end justify-between gap-3">
-        <span className="text-[13px] font-medium text-line">Progres jalur</span>
+        <span className="text-[13px] font-medium text-line">Progres skill tree</span>
         <span className="font-display text-4xl font-bold leading-none tabular-nums tracking-tight text-chalk">
           {clamped}
           <span className="text-xl text-muted">%</span>
